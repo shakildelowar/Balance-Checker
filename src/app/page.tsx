@@ -104,10 +104,10 @@ export default function Home() {
     <main className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-semibold mb-1 tracking-tight text-white/95">
             Balance Checker
           </h1>
-          <p className="text-[var(--muted)] text-sm">
+          <p className="text-[var(--muted)] text-sm tracking-tight">
             Check any ETH or SOL wallet balance at a specific date
           </p>
         </div>
