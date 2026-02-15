@@ -20,6 +20,9 @@ interface BalanceResult {
   blockNumber?: number;
   slot?: number;
   tokens?: TokenHolding[];
+  priceUsd?: number | null;
+  usdValue?: string | null;
+  isHistorical?: boolean;
 }
 
 export default function Home() {
@@ -87,31 +90,43 @@ export default function Home() {
     }
   };
 
+  const formatUsd = (value: string) => {
+    const num = parseFloat(value);
+    return num.toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
   return (
     <main className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">Balance Checker</h1>
-          <p className="text-[var(--muted)]">
+          <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
+            Balance Checker
+          </h1>
+          <p className="text-[var(--muted)] text-sm">
             Check any ETH or SOL wallet balance at a specific date
           </p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-2xl border border-[var(--card-border)] bg-[var(--card)] p-6 space-y-5"
+          className="glass-card relative rounded-2xl p-6 space-y-5"
         >
           {/* Chain selector */}
           <div>
-            <label className="block text-sm font-medium mb-2">Network</label>
+            <label className="block text-sm font-medium mb-2 text-white/70">
+              Network
+            </label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setChain("ETH")}
-                className={`py-3 rounded-xl text-sm font-medium transition-all cursor-pointer ${
-                  chain === "ETH"
-                    ? "bg-[var(--eth-color)] text-white"
-                    : "bg-[var(--background)] text-[var(--muted)] hover:text-white border border-[var(--card-border)]"
+                className={`py-3 rounded-xl text-sm font-medium cursor-pointer ${
+                  chain === "ETH" ? "chain-btn-active-eth" : "chain-btn text-white/40 hover:text-white/70"
                 }`}
               >
                 Ethereum (ETH)
@@ -119,10 +134,8 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setChain("SOL")}
-                className={`py-3 rounded-xl text-sm font-medium transition-all cursor-pointer ${
-                  chain === "SOL"
-                    ? "bg-[var(--sol-color)] text-white"
-                    : "bg-[var(--background)] text-[var(--muted)] hover:text-white border border-[var(--card-border)]"
+                className={`py-3 rounded-xl text-sm font-medium cursor-pointer ${
+                  chain === "SOL" ? "chain-btn-active-sol" : "chain-btn text-white/40 hover:text-white/70"
                 }`}
               >
                 Solana (SOL)
@@ -132,7 +145,7 @@ export default function Home() {
 
           {/* Wallet address */}
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium mb-2 text-white/70">
               Wallet Address
             </label>
             <input
@@ -144,13 +157,15 @@ export default function Home() {
                   ? "0x742d35Cc6634C0532925a3b844..."
                   : "7xKXtg2CW87d97TXJSDpbD5jBk..."
               }
-              className="w-full px-4 py-3 rounded-xl bg-[var(--background)] border border-[var(--card-border)] text-white placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--accent)] transition-colors text-sm font-mono"
+              className="glass-input w-full px-4 py-3 rounded-xl text-white placeholder:text-white/20 focus:outline-none text-sm font-mono"
             />
           </div>
 
           {/* Date picker */}
           <div>
-            <label className="block text-sm font-medium mb-2">Date</label>
+            <label className="block text-sm font-medium mb-2 text-white/70">
+              Date
+            </label>
             <input
               type="date"
               value={date}
@@ -160,13 +175,13 @@ export default function Home() {
                 setResult(null);
               }}
               max={new Date().toISOString().split("T")[0]}
-              className="w-full px-4 py-3 rounded-xl bg-[var(--background)] border border-[var(--card-border)] text-white focus:outline-none focus:border-[var(--accent)] transition-colors text-sm"
+              className="glass-input w-full px-4 py-3 rounded-xl text-white focus:outline-none text-sm"
             />
           </div>
 
           {/* Error */}
           {error && (
-            <div className="text-red-400 text-sm bg-red-400/10 rounded-xl px-4 py-3">
+            <div className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-xl px-4 py-3">
               {error}
             </div>
           )}
@@ -175,11 +190,7 @@ export default function Home() {
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-3 rounded-xl font-medium transition-all cursor-pointer ${
-              loading
-                ? "bg-[var(--accent)]/50 text-white/50 cursor-not-allowed"
-                : "bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white"
-            }`}
+            className="glass-button w-full py-3 rounded-xl font-medium text-white cursor-pointer"
           >
             {loading ? "Checking..." : "Check Balance"}
           </button>
@@ -189,9 +200,9 @@ export default function Home() {
         {result && (
           <div className="mt-6 space-y-4">
             {/* Native balance */}
-            <div className="rounded-2xl border border-[var(--card-border)] bg-[var(--card)] p-6">
+            <div className="glass-result relative rounded-2xl p-6">
               <div className="text-center">
-                <p className="text-[var(--muted)] text-sm mb-1">
+                <p className="text-white/40 text-sm mb-1">
                   Balance on{" "}
                   {new Date(result.date).toLocaleDateString("en-US", {
                     year: "numeric",
@@ -211,17 +222,32 @@ export default function Home() {
                     {result.symbol}
                   </span>
                 </p>
-                <p className="text-[var(--muted)] text-xs mt-3 font-mono break-all">
+
+                {/* USD value */}
+                {result.usdValue && (
+                  <p className="text-white/50 text-lg mt-1">
+                    {formatUsd(result.usdValue)}
+                  </p>
+                )}
+                {result.priceUsd && (
+                  <p className="text-white/30 text-xs mt-1">
+                    @ ${result.priceUsd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per {result.symbol}
+                  </p>
+                )}
+
+                <p className="text-white/25 text-xs mt-3 font-mono break-all">
                   {result.address}
                 </p>
                 {result.blockNumber && (
-                  <p className="text-[var(--muted)] text-xs mt-1">
+                  <p className="text-white/25 text-xs mt-1">
                     Block #{result.blockNumber.toLocaleString()}
                   </p>
                 )}
-                {result.slot && (
-                  <p className="text-[var(--muted)] text-xs mt-1">
-                    Slot #{result.slot.toLocaleString()}
+
+                {/* SOL accuracy note */}
+                {result.chain === "SOL" && result.isHistorical === false && (
+                  <p className="text-amber-400/70 text-xs mt-3 bg-amber-400/5 border border-amber-400/10 rounded-lg px-3 py-2">
+                    Approximate - wallet has too much history to fully reconstruct
                   </p>
                 )}
               </div>
@@ -229,26 +255,33 @@ export default function Home() {
 
             {/* Token breakdown */}
             {result.tokens && result.tokens.length > 0 && (
-              <div className="rounded-2xl border border-[var(--card-border)] bg-[var(--card)] p-6">
-                <h3 className="text-sm font-medium text-[var(--muted)] mb-4">
+              <div className="glass-card relative rounded-2xl p-6">
+                <h3 className="text-sm font-medium text-white/40 mb-4">
                   Token Holdings ({result.tokens.length})
                 </h3>
-                <div className="space-y-3">
+                <div className="space-y-1">
                   {result.tokens.map((token) => (
                     <div
                       key={token.contractAddress}
-                      className="flex items-center justify-between py-2 border-b border-[var(--card-border)] last:border-0"
+                      className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-white/[0.03] transition-colors"
                     >
                       <div>
-                        <p className="text-sm font-medium">{token.symbol}</p>
-                        <p className="text-xs text-[var(--muted)]">
-                          {token.name}
+                        <p className="text-sm font-medium text-white/90">
+                          {token.symbol}
                         </p>
+                        <p className="text-xs text-white/30">{token.name}</p>
                       </div>
-                      <p className="text-sm font-mono">{token.balance}</p>
+                      <p className="text-sm font-mono text-white/70">
+                        {token.balance}
+                      </p>
                     </div>
                   ))}
                 </div>
+                {result.chain === "SOL" && (
+                  <p className="text-white/20 text-xs mt-4 text-center">
+                    Token holdings reflect current balances
+                  </p>
+                )}
               </div>
             )}
           </div>

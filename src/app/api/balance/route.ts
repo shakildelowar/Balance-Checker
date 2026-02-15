@@ -10,6 +10,27 @@ function etherscanParams(extra: Record<string, string>): string {
   return params.toString();
 }
 
+// ── Price helpers ───────────────────────────────────────────────────────
+
+async function getHistoricalPrice(
+  coinId: string,
+  dateStr: string
+): Promise<number | null> {
+  // CoinGecko expects dd-mm-yyyy
+  const [year, month, day] = dateStr.split("-");
+  const formatted = `${day}-${month}-${year}`;
+  try {
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/coins/${coinId}/history?date=${formatted}&localization=false`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.market_data?.current_price?.usd ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // ── ETH helpers ─────────────────────────────────────────────────────────
 
 async function getEthBlockByTimestamp(timestamp: number): Promise<number> {
@@ -58,7 +79,6 @@ async function getEthTokenBreakdown(
   address: string,
   blockNumber: number
 ): Promise<TokenHolding[]> {
-  // Fetch all ERC-20 transfers to/from this address up to the target block
   const allTransfers: Array<{
     contractAddress: string;
     tokenSymbol: string;
@@ -73,7 +93,6 @@ async function getEthTokenBreakdown(
   const pageSize = 10000;
   const addrLower = address.toLowerCase();
 
-  // Paginate through token transfers (Etherscan max 10k per page)
   while (page <= 10) {
     const qs = etherscanParams({
       module: "account",
@@ -96,7 +115,6 @@ async function getEthTokenBreakdown(
 
   if (allTransfers.length === 0) return [];
 
-  // Calculate net balance per token
   const tokenMap = new Map<
     string,
     { symbol: string; name: string; decimals: number; net: bigint }
@@ -118,7 +136,6 @@ async function getEthTokenBreakdown(
     if (tx.from.toLowerCase() === addrLower) entry.net -= val;
   }
 
-  // Convert to array, filter out zero balances
   const holdings: TokenHolding[] = [];
   for (const [contract, data] of tokenMap) {
     if (data.net <= 0n) continue;
@@ -134,7 +151,6 @@ async function getEthTokenBreakdown(
     });
   }
 
-  // Sort by symbol for consistent display
   holdings.sort((a, b) => a.symbol.localeCompare(b.symbol));
   return holdings;
 }
@@ -150,45 +166,124 @@ async function solanaRpc(method: string, params: unknown[]) {
   return res.json();
 }
 
-async function getSolBalance(
+// Reconstruct SOL balance at a target date by walking back from current balance
+// using transaction history. This gives an accurate historical native balance.
+async function getSolHistoricalBalance(
   address: string,
   dateStr: string
-): Promise<{ balance: string; slot?: number }> {
-  const targetDate = new Date(dateStr);
+): Promise<{ balance: string; slot?: number; isHistorical: boolean }> {
+  // Get current balance first
+  const currentData = await solanaRpc("getBalance", [address]);
+  if (currentData.error) {
+    throw new Error(currentData.error.message || "Failed to get SOL balance");
+  }
+  const currentLamports: number = currentData.result?.value ?? 0;
+  const currentSlot: number = currentData.result?.context?.slot;
+
+  const targetDate = new Date(dateStr + "T23:59:59Z");
   const now = new Date();
-  const diffDays = Math.floor((now.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24));
+  const diffDays = Math.floor(
+    (now.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24)
+  );
 
-  if (diffDays <= 2) {
-    const data = await solanaRpc("getBalance", [address]);
-    if (data.error) throw new Error(data.error.message || "Failed to get SOL balance");
-    const lamports = data.result?.value ?? 0;
-    return { balance: (lamports / 1e9).toFixed(6), slot: data.result?.context?.slot };
-  }
-
-  // Estimate historical slot (~2.5 slots/sec = 216k/day)
-  const slotData = await solanaRpc("getSlot", [{ commitment: "finalized" }]);
-  if (slotData.error) throw new Error("Failed to get current Solana slot");
-  const currentSlot: number = slotData.result;
-  const estimatedSlot = Math.max(0, currentSlot - diffDays * 216_000);
-
-  try {
-    const balData = await solanaRpc("getBalance", [
-      address,
-      { commitment: "finalized", minContextSlot: estimatedSlot },
-    ]);
-    if (balData.error) throw new Error("historical query failed");
-    const lamports = balData.result?.value ?? 0;
+  // If today or yesterday, just return current balance
+  if (diffDays <= 1) {
     return {
-      balance: (lamports / 1e9).toFixed(6),
-      slot: balData.result?.context?.slot ?? estimatedSlot,
+      balance: (currentLamports / 1e9).toFixed(6),
+      slot: currentSlot,
+      isHistorical: true,
     };
-  } catch {
-    // Fallback to current balance
-    const data = await solanaRpc("getBalance", [address]);
-    if (data.error) throw new Error(data.error.message || "Failed to get SOL balance");
-    const lamports = data.result?.value ?? 0;
-    return { balance: (lamports / 1e9).toFixed(6), slot: data.result?.context?.slot };
   }
+
+  // Walk through transaction signatures to reconstruct historical balance.
+  // We sum up all SOL changes (in/out) that happened AFTER the target date
+  // and subtract them from the current balance to get the balance at that date.
+  const targetTimestamp = Math.floor(targetDate.getTime() / 1000);
+  let netChangeAfterDate = 0; // in lamports
+  let beforeSig: string | undefined;
+  let reachedTarget = false;
+  let pagesScanned = 0;
+  const maxPages = 20; // safety limit
+
+  while (!reachedTarget && pagesScanned < maxPages) {
+    pagesScanned++;
+    const sigParams: Record<string, unknown> = { limit: 1000 };
+    if (beforeSig) sigParams.before = beforeSig;
+
+    const sigData = await solanaRpc("getSignaturesForAddress", [
+      address,
+      sigParams,
+    ]);
+
+    if (sigData.error || !sigData.result || sigData.result.length === 0) break;
+
+    for (const sig of sigData.result) {
+      // If this transaction is before our target date, we're done
+      if (sig.blockTime && sig.blockTime <= targetTimestamp) {
+        reachedTarget = true;
+        break;
+      }
+
+      // Skip failed transactions
+      if (sig.err !== null) continue;
+
+      // Fetch the actual transaction to see SOL balance changes
+      try {
+        const txData = await solanaRpc("getTransaction", [
+          sig.signature,
+          { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 },
+        ]);
+
+        if (!txData.result?.meta) continue;
+
+        const meta = txData.result.meta;
+        const accountKeys =
+          txData.result.transaction?.message?.accountKeys ?? [];
+
+        // Find this wallet's index in the account keys
+        let walletIndex = -1;
+        for (let i = 0; i < accountKeys.length; i++) {
+          const key =
+            typeof accountKeys[i] === "string"
+              ? accountKeys[i]
+              : accountKeys[i]?.pubkey;
+          if (key === address) {
+            walletIndex = i;
+            break;
+          }
+        }
+
+        if (walletIndex === -1) continue;
+
+        const preBal = meta.preBalances?.[walletIndex] ?? 0;
+        const postBal = meta.postBalances?.[walletIndex] ?? 0;
+        const diff = postBal - preBal; // positive = received, negative = sent
+        netChangeAfterDate += diff;
+      } catch {
+        // If we can't fetch a transaction, skip it
+        continue;
+      }
+    }
+
+    // Set cursor for next page
+    const lastSig = sigData.result[sigData.result.length - 1];
+    beforeSig = lastSig.signature;
+
+    // If the oldest tx on this page is already before our date, done
+    if (lastSig.blockTime && lastSig.blockTime <= targetTimestamp) {
+      reachedTarget = true;
+    }
+  }
+
+  // Historical balance = current balance - net change that happened after the target date
+  const historicalLamports = currentLamports - netChangeAfterDate;
+  const historicalSol = Math.max(0, historicalLamports) / 1e9;
+
+  return {
+    balance: historicalSol.toFixed(6),
+    slot: currentSlot,
+    isHistorical: reachedTarget,
+  };
 }
 
 // Known SPL token metadata (top tokens)
@@ -272,11 +367,14 @@ export async function POST(req: NextRequest) {
 
       const blockNumber = await getEthBlockByTimestamp(timestamp);
 
-      // Fetch native balance and token breakdown in parallel
-      const [balance, tokens] = await Promise.all([
+      const [balance, tokens, priceUsd] = await Promise.all([
         getEthBalance(address, blockNumber),
         getEthTokenBreakdown(address, blockNumber),
+        getHistoricalPrice("ethereum", date),
       ]);
+
+      const balanceNum = parseFloat(balance);
+      const usdValue = priceUsd ? (balanceNum * priceUsd).toFixed(2) : null;
 
       return NextResponse.json({
         address,
@@ -286,6 +384,9 @@ export async function POST(req: NextRequest) {
         symbol: "ETH",
         blockNumber,
         tokens,
+        priceUsd,
+        usdValue,
+        isHistorical: true,
       });
     }
 
@@ -297,11 +398,15 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Fetch native balance and token breakdown in parallel
-      const [{ balance, slot }, tokens] = await Promise.all([
-        getSolBalance(address, date),
-        getSolTokenBreakdown(address),
-      ]);
+      const [{ balance, slot, isHistorical }, tokens, priceUsd] =
+        await Promise.all([
+          getSolHistoricalBalance(address, date),
+          getSolTokenBreakdown(address),
+          getHistoricalPrice("solana", date),
+        ]);
+
+      const balanceNum = parseFloat(balance);
+      const usdValue = priceUsd ? (balanceNum * priceUsd).toFixed(2) : null;
 
       return NextResponse.json({
         address,
@@ -311,6 +416,9 @@ export async function POST(req: NextRequest) {
         symbol: "SOL",
         slot,
         tokens,
+        priceUsd,
+        usdValue,
+        isHistorical,
       });
     }
 
