@@ -100,88 +100,110 @@ export default function Home() {
     });
   };
 
+  const chainColor = chain === "ETH" ? "var(--eth-color)" : "var(--sol-color)";
+
   return (
-    <main className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-lg">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-semibold mb-1 tracking-tight text-white/95">
+    <main className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
+      <div className="w-full max-w-[420px]">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h1
+            className="text-[34px] font-bold tracking-tight"
+            style={{ color: "var(--label-primary)" }}
+          >
             Balance Checker
           </h1>
-          <p className="text-[var(--muted)] text-sm tracking-tight">
-            Check any ETH or SOL wallet balance at a specific date
+          <p
+            className="mt-1 text-[15px]"
+            style={{ color: "var(--label-tertiary)" }}
+          >
+            Historical ETH & SOL wallet balances
           </p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="glass-card relative rounded-2xl p-6 space-y-5"
-        >
-          {/* Chain selector */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Network segmented control */}
           <div>
-            <label className="block text-sm font-medium mb-2 text-white/70">
-              Network
-            </label>
-            <div className="grid grid-cols-2 gap-3">
+            <p className="ios-section-header mb-2">Network</p>
+            <div className="ios-segmented">
               <button
                 type="button"
                 onClick={() => setChain("ETH")}
-                className={`py-3 rounded-xl text-sm font-medium cursor-pointer ${
-                  chain === "ETH" ? "chain-btn-active-eth" : "chain-btn text-white/40 hover:text-white/70"
+                className={`ios-segment cursor-pointer ${
+                  chain === "ETH" ? "ios-segment-active" : ""
                 }`}
               >
-                Ethereum (ETH)
+                Ethereum
               </button>
               <button
                 type="button"
                 onClick={() => setChain("SOL")}
-                className={`py-3 rounded-xl text-sm font-medium cursor-pointer ${
-                  chain === "SOL" ? "chain-btn-active-sol" : "chain-btn text-white/40 hover:text-white/70"
+                className={`ios-segment cursor-pointer ${
+                  chain === "SOL" ? "ios-segment-active" : ""
                 }`}
               >
-                Solana (SOL)
+                Solana
               </button>
             </div>
           </div>
 
-          {/* Wallet address */}
+          {/* Grouped inputs card */}
           <div>
-            <label className="block text-sm font-medium mb-2 text-white/70">
-              Wallet Address
-            </label>
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => handleAddressChange(e.target.value)}
-              placeholder={
-                chain === "ETH"
-                  ? "0x742d35Cc6634C0532925a3b844..."
-                  : "7xKXtg2CW87d97TXJSDpbD5jBk..."
-              }
-              className="glass-input w-full px-4 py-3 rounded-xl text-white placeholder:text-white/20 focus:outline-none text-sm font-mono"
-            />
-          </div>
+            <p className="ios-section-header">Details</p>
+            <div className="ios-card">
+              {/* Wallet address row */}
+              <div className="px-4 py-3">
+                <label
+                  className="block text-[13px] mb-1.5 font-medium"
+                  style={{ color: "var(--label-secondary)" }}
+                >
+                  Wallet Address
+                </label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => handleAddressChange(e.target.value)}
+                  placeholder={
+                    chain === "ETH"
+                      ? "0x742d35Cc6634C0532925a3b8..."
+                      : "7xKXtg2CW87d97TXJSDpbD5j..."
+                  }
+                  className="ios-input w-full px-3.5 py-2.5 font-mono text-[15px]"
+                />
+              </div>
 
-          {/* Date picker */}
-          <div>
-            <label className="block text-sm font-medium mb-2 text-white/70">
-              Date
-            </label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => {
-                setDate(e.target.value);
-                setError("");
-                setResult(null);
-              }}
-              max={new Date().toISOString().split("T")[0]}
-              className="glass-input w-full px-4 py-3 rounded-xl text-white focus:outline-none text-sm"
-            />
+              {/* Divider */}
+              <div
+                className="mx-4"
+                style={{ borderTop: "0.33px solid var(--separator)" }}
+              />
+
+              {/* Date row */}
+              <div className="px-4 py-3">
+                <label
+                  className="block text-[13px] mb-1.5 font-medium"
+                  style={{ color: "var(--label-secondary)" }}
+                >
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => {
+                    setDate(e.target.value);
+                    setError("");
+                    setResult(null);
+                  }}
+                  max={new Date().toISOString().split("T")[0]}
+                  className="ios-input w-full px-3.5 py-2.5 text-[15px]"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Error */}
           {error && (
-            <div className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-xl px-4 py-3">
+            <div className="ios-error px-4 py-3">
               {error}
             </div>
           )}
@@ -190,95 +212,181 @@ export default function Home() {
           <button
             type="submit"
             disabled={loading}
-            className="glass-button w-full py-3 rounded-xl font-medium text-white cursor-pointer"
+            className="ios-button w-full py-3.5 cursor-pointer"
           >
-            {loading ? "Checking..." : "Check Balance"}
+            {loading ? (
+              <span className="flex items-center justify-center gap-2.5">
+                <span className="ios-spinner" />
+                Checking...
+              </span>
+            ) : (
+              "Check Balance"
+            )}
           </button>
         </form>
 
-        {/* Result */}
+        {/* Results */}
         {result && (
-          <div className="mt-6 space-y-4">
-            {/* Native balance */}
-            <div className="glass-result relative rounded-2xl p-6">
-              <div className="text-center">
-                <p className="text-white/40 text-sm mb-1">
-                  Balance on{" "}
-                  {new Date(result.date).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </p>
-                <p className="text-4xl font-bold mt-2">
-                  {result.balance}{" "}
+          <div className="mt-8 space-y-5 ios-animate-in">
+            {/* Balance hero card */}
+            <div className="ios-result-card p-6" data-chain={result.chain}>
+              <div className="relative text-center">
+                {/* Chain pill */}
+                <div className="flex justify-center mb-4">
                   <span
-                    className={
-                      result.chain === "ETH"
-                        ? "text-[var(--eth-color)]"
-                        : "text-[var(--sol-color)]"
-                    }
+                    className="ios-pill"
+                    style={{
+                      background:
+                        result.chain === "ETH"
+                          ? "var(--eth-tint)"
+                          : "var(--sol-tint)",
+                      color: chainColor,
+                    }}
                   >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ background: chainColor }}
+                    />
+                    {result.chain === "ETH" ? "Ethereum" : "Solana"}
+                  </span>
+                </div>
+
+                {/* Main balance */}
+                <p className="balance-hero" style={{ color: "var(--label-primary)" }}>
+                  {result.balance}
+                  <span className="balance-symbol ml-1.5" style={{ color: chainColor }}>
                     {result.symbol}
                   </span>
                 </p>
 
                 {/* USD value */}
                 {result.usdValue && (
-                  <p className="text-white/50 text-lg mt-1">
+                  <p
+                    className="text-[22px] font-medium mt-1"
+                    style={{ color: "var(--label-secondary)" }}
+                  >
                     {formatUsd(result.usdValue)}
                   </p>
                 )}
-                {result.priceUsd && (
-                  <p className="text-white/30 text-xs mt-1">
-                    @ ${result.priceUsd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per {result.symbol}
-                  </p>
-                )}
 
-                <p className="text-white/25 text-xs mt-3 font-mono break-all">
-                  {result.address}
+                {/* Date context */}
+                <p
+                  className="text-[13px] mt-3"
+                  style={{ color: "var(--label-tertiary)" }}
+                >
+                  {new Date(result.date).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
                 </p>
-                {result.blockNumber && (
-                  <p className="text-white/25 text-xs mt-1">
-                    Block #{result.blockNumber.toLocaleString()}
-                  </p>
-                )}
 
-                {/* SOL accuracy note */}
+                {/* SOL accuracy warning */}
                 {result.chain === "SOL" && result.isHistorical === false && (
-                  <p className="text-amber-400/70 text-xs mt-3 bg-amber-400/5 border border-amber-400/10 rounded-lg px-3 py-2">
-                    Approximate - wallet has too much history to fully reconstruct
-                  </p>
+                  <div
+                    className="mt-4 px-3 py-2 rounded-lg text-[13px]"
+                    style={{
+                      background: "rgba(255, 159, 10, 0.1)",
+                      color: "var(--system-orange)",
+                    }}
+                  >
+                    Approximate - too much history to fully reconstruct
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Token breakdown */}
+            {/* Details card */}
+            <div>
+              <p className="ios-section-header">Details</p>
+              <div className="ios-card">
+                {result.priceUsd && (
+                  <div className="ios-row">
+                    <span className="ios-detail-label">Price</span>
+                    <span className="ios-detail-value">
+                      $
+                      {result.priceUsd.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                )}
+                {result.blockNumber && (
+                  <div className="ios-row">
+                    <span className="ios-detail-label">Block</span>
+                    <span className="ios-detail-value font-mono text-[15px]">
+                      {result.blockNumber.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                {result.slot && (
+                  <div className="ios-row">
+                    <span className="ios-detail-label">Slot</span>
+                    <span className="ios-detail-value font-mono text-[15px]">
+                      {result.slot.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                <div className="ios-row">
+                  <span className="ios-detail-label">Wallet</span>
+                  <span
+                    className="ios-detail-value font-mono text-[13px] max-w-[200px] truncate"
+                    title={result.address}
+                  >
+                    {result.address}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Token holdings */}
             {result.tokens && result.tokens.length > 0 && (
-              <div className="glass-card relative rounded-2xl p-6">
-                <h3 className="text-sm font-medium text-white/40 mb-4">
+              <div>
+                <p className="ios-section-header">
                   Token Holdings ({result.tokens.length})
-                </h3>
-                <div className="space-y-1">
-                  {result.tokens.map((token) => (
-                    <div
-                      key={token.contractAddress}
-                      className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-white/[0.03] transition-colors"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-white/90">
-                          {token.symbol}
+                </p>
+                <div className="ios-card">
+                  {result.tokens.map((token, i) => (
+                    <div key={token.contractAddress}>
+                      {i > 0 && (
+                        <div
+                          className="ml-4"
+                          style={{
+                            borderTop: "0.33px solid var(--separator)",
+                          }}
+                        />
+                      )}
+                      <div className="ios-row">
+                        <div>
+                          <p
+                            className="text-[17px] font-medium"
+                            style={{ color: "var(--label-primary)" }}
+                          >
+                            {token.symbol}
+                          </p>
+                          <p
+                            className="text-[13px]"
+                            style={{ color: "var(--label-tertiary)" }}
+                          >
+                            {token.name}
+                          </p>
+                        </div>
+                        <p
+                          className="font-mono text-[15px]"
+                          style={{ color: "var(--label-secondary)" }}
+                        >
+                          {token.balance}
                         </p>
-                        <p className="text-xs text-white/30">{token.name}</p>
                       </div>
-                      <p className="text-sm font-mono text-white/70">
-                        {token.balance}
-                      </p>
                     </div>
                   ))}
                 </div>
                 {result.chain === "SOL" && (
-                  <p className="text-white/20 text-xs mt-4 text-center">
+                  <p
+                    className="text-[12px] mt-2 px-4"
+                    style={{ color: "var(--label-quaternary)" }}
+                  >
                     Token holdings reflect current balances
                   </p>
                 )}

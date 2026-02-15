@@ -3,9 +3,26 @@
 :root {
   --background: #000000;
   --foreground: #f5f5f7;
-  --muted: #86868b;
+  --muted: #8e8e93;
+  --secondary-bg: rgba(28, 28, 30, 1);
+  --tertiary-bg: rgba(44, 44, 46, 1);
+  --separator: rgba(84, 84, 88, 0.34);
   --eth-color: #627eea;
+  --eth-tint: rgba(98, 126, 234, 0.12);
   --sol-color: #9945ff;
+  --sol-tint: rgba(153, 69, 255, 0.12);
+  --system-blue: #0a84ff;
+  --system-green: #30d158;
+  --system-red: #ff453a;
+  --system-orange: #ff9f0a;
+  --label-primary: rgba(255, 255, 255, 0.92);
+  --label-secondary: rgba(235, 235, 245, 0.6);
+  --label-tertiary: rgba(235, 235, 245, 0.3);
+  --label-quaternary: rgba(235, 235, 245, 0.18);
+  --fill-primary: rgba(120, 120, 128, 0.36);
+  --fill-secondary: rgba(120, 120, 128, 0.32);
+  --fill-tertiary: rgba(118, 118, 128, 0.24);
+  --fill-quaternary: rgba(116, 116, 128, 0.18);
 }
 
 body {
@@ -13,154 +30,260 @@ body {
   color: var(--foreground);
   font-family:
     -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
-    system-ui, sans-serif;
+    "SF Pro Rounded", system-ui, sans-serif;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Soft ambient light behind content */
+/* ── iOS 18 mesh gradient background ─────────────────────────────────── */
 body::before {
   content: "";
   position: fixed;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(
-    circle,
-    rgba(255, 255, 255, 0.03) 0%,
-    transparent 70%
-  );
+  inset: 0;
+  background:
+    radial-gradient(ellipse 50% 40% at 50% 0%, rgba(98, 126, 234, 0.08) 0%, transparent 100%),
+    radial-gradient(ellipse 60% 50% at 30% 100%, rgba(153, 69, 255, 0.05) 0%, transparent 100%);
   pointer-events: none;
   z-index: -1;
 }
 
-/* ── Apple-style frosted glass card ──────────────────────────────────── */
-.glass-card {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(40px) saturate(1.8);
-  -webkit-backdrop-filter: blur(40px) saturate(1.8);
-  border: 0.5px solid rgba(255, 255, 255, 0.12);
+/* ── iOS grouped section card ────────────────────────────────────────── */
+.ios-card {
+  background: var(--secondary-bg);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* ── iOS inset grouped card (like Settings) ──────────────────────────── */
+.ios-inset-card {
+  background: rgba(28, 28, 30, 0.92);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  border-radius: 16px;
+  border: 0.33px solid var(--separator);
+}
+
+/* ── iOS segmented control ───────────────────────────────────────────── */
+.ios-segmented {
+  background: var(--fill-quaternary);
+  border-radius: 9px;
+  padding: 2px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  position: relative;
+}
+
+.ios-segment {
+  position: relative;
+  z-index: 1;
+  padding: 7px 0;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--label-primary);
+  cursor: pointer;
+  transition: color 0.2s ease;
+  border: none;
+  background: transparent;
+  text-align: center;
+}
+
+.ios-segment:not(.ios-segment-active) {
+  color: var(--label-secondary);
+}
+
+.ios-segment-active {
+  background: rgba(58, 58, 60, 1);
   box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.05),
-    0 2px 8px rgba(0, 0, 0, 0.2),
-    0 12px 40px rgba(0, 0, 0, 0.15);
+    0 3px 8px rgba(0, 0, 0, 0.12),
+    0 1px 1px rgba(0, 0, 0, 0.06),
+    0 3px 1px rgba(0, 0, 0, 0.04);
 }
 
-/* Subtle top-edge highlight like light hitting glass */
-.glass-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 20px;
-  right: 20px;
-  height: 0.5px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.15),
-    transparent
-  );
-  border-radius: 1px;
-}
-
-/* ── Result card - slightly brighter ─────────────────────────────────── */
-.glass-result {
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(40px) saturate(1.8);
-  -webkit-backdrop-filter: blur(40px) saturate(1.8);
-  border: 0.5px solid rgba(255, 255, 255, 0.14);
-  box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.06),
-    0 2px 8px rgba(0, 0, 0, 0.2),
-    0 12px 40px rgba(0, 0, 0, 0.15);
-}
-
-.glass-result::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 20px;
-  right: 20px;
-  height: 0.5px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
-  border-radius: 1px;
-}
-
-/* ── Inputs ──────────────────────────────────────────────────────────── */
-.glass-input {
-  background: rgba(255, 255, 255, 0.06);
-  border: 0.5px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.glass-input:focus {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.04);
-}
-
-/* ── Button ──────────────────────────────────────────────────────────── */
-.glass-button {
-  background: rgba(255, 255, 255, 0.12);
-  border: 0.5px solid rgba(255, 255, 255, 0.18);
-  box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.06),
-    0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  font-weight: 500;
+/* ── iOS text field ──────────────────────────────────────────────────── */
+.ios-input {
+  background: var(--fill-quaternary);
+  border: 0.33px solid transparent;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  color: var(--label-primary);
+  font-size: 17px;
   letter-spacing: -0.01em;
 }
 
-.glass-button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.25);
-  transform: scale(1.01);
+.ios-input::placeholder {
+  color: var(--label-tertiary);
 }
 
-.glass-button:active:not(:disabled) {
-  transform: scale(0.99);
-  background: rgba(255, 255, 255, 0.1);
+.ios-input:focus {
+  border-color: var(--system-blue);
+  box-shadow: 0 0 0 3.5px rgba(10, 132, 255, 0.25);
+  outline: none;
 }
 
-.glass-button:disabled {
-  opacity: 0.4;
+/* ── iOS primary button ──────────────────────────────────────────────── */
+.ios-button {
+  background: var(--system-blue);
+  border: none;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  color: #fff;
+  transition: all 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.ios-button:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.ios-button:active:not(:disabled) {
+  transform: scale(0.98);
+  filter: brightness(0.9);
+}
+
+.ios-button:disabled {
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
-/* ── Chain toggles ───────────────────────────────────────────────────── */
-.chain-btn {
-  background: rgba(255, 255, 255, 0.04);
-  border: 0.5px solid rgba(255, 255, 255, 0.08);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+/* ── iOS result card ─────────────────────────────────────────────────── */
+.ios-result-card {
+  background: var(--secondary-bg);
+  border-radius: 20px;
+  border: 0.33px solid var(--separator);
+  position: relative;
+  overflow: hidden;
 }
 
-.chain-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+/* Subtle gradient at top of result card */
+.ios-result-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  pointer-events: none;
 }
 
-.chain-btn-active-eth {
-  background: rgba(98, 126, 234, 0.15);
-  border-color: rgba(98, 126, 234, 0.3);
-  box-shadow: 0 0 0 0.5px rgba(98, 126, 234, 0.1);
-  color: #a4b4f0;
+.ios-result-card[data-chain="ETH"]::before {
+  background: linear-gradient(180deg, rgba(98, 126, 234, 0.08) 0%, transparent 100%);
 }
 
-.chain-btn-active-sol {
-  background: rgba(153, 69, 255, 0.15);
-  border-color: rgba(153, 69, 255, 0.3);
-  box-shadow: 0 0 0 0.5px rgba(153, 69, 255, 0.1);
-  color: #c9a0ff;
+.ios-result-card[data-chain="SOL"]::before {
+  background: linear-gradient(180deg, rgba(153, 69, 255, 0.08) 0%, transparent 100%);
 }
 
-/* ── Divider ─────────────────────────────────────────────────────────── */
-.glass-divider {
-  border-color: rgba(255, 255, 255, 0.06);
+/* ── iOS list row ────────────────────────────────────────────────────── */
+.ios-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  transition: background 0.15s ease;
+}
+
+.ios-row:active {
+  background: var(--fill-quaternary);
+}
+
+.ios-row + .ios-row {
+  border-top: 0.33px solid var(--separator);
+}
+
+/* ── iOS section header ──────────────────────────────────────────────── */
+.ios-section-header {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--label-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding: 0 16px;
+  margin-bottom: 7px;
+}
+
+/* ── iOS detail row (label + value) ──────────────────────────────────── */
+.ios-detail-label {
+  font-size: 17px;
+  color: var(--label-primary);
+}
+
+.ios-detail-value {
+  font-size: 17px;
+  color: var(--label-secondary);
+}
+
+/* ── Balance hero ────────────────────────────────────────────────────── */
+.balance-hero {
+  font-size: 48px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.balance-symbol {
+  font-weight: 600;
+  font-size: 28px;
+  vertical-align: baseline;
+}
+
+/* ── Animations ──────────────────────────────────────────────────────── */
+@keyframes ios-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ios-animate-in {
+  animation: ios-slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ── Loading spinner ─────────────────────────────────────────────────── */
+@keyframes ios-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ios-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: ios-spin 0.8s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* ── Date input styling ──────────────────────────────────────────────── */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.5);
+}
+
+/* ── Error banner ────────────────────────────────────────────────────── */
+.ios-error {
+  background: rgba(255, 69, 58, 0.12);
+  border: 0.33px solid rgba(255, 69, 58, 0.2);
+  border-radius: 12px;
+  color: var(--system-red);
+  font-size: 15px;
+}
+
+/* ── Pill badge ──────────────────────────────────────────────────────── */
+.ios-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 500;
 }
