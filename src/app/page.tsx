@@ -4,6 +4,13 @@ import { useState } from "react";
 
 type ChainType = "ETH" | "SOL";
 
+interface TokenHolding {
+  symbol: string;
+  name: string;
+  balance: string;
+  contractAddress: string;
+}
+
 interface BalanceResult {
   address: string;
   chain: ChainType;
@@ -12,6 +19,7 @@ interface BalanceResult {
   symbol: string;
   blockNumber?: number;
   slot?: number;
+  tokens?: TokenHolding[];
 }
 
 export default function Home() {
@@ -179,37 +187,70 @@ export default function Home() {
 
         {/* Result */}
         {result && (
-          <div className="mt-6 rounded-2xl border border-[var(--card-border)] bg-[var(--card)] p-6">
-            <div className="text-center">
-              <p className="text-[var(--muted)] text-sm mb-1">
-                Balance on {new Date(result.date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
-              </p>
-              <p className="text-4xl font-bold mt-2">
-                {result.balance}{" "}
-                <span
-                  className={
-                    result.chain === "ETH"
-                      ? "text-[var(--eth-color)]"
-                      : "text-[var(--sol-color)]"
-                  }
-                >
-                  {result.symbol}
-                </span>
-              </p>
-              <p className="text-[var(--muted)] text-xs mt-3 font-mono break-all">
-                {result.address}
-              </p>
-              {result.blockNumber && (
-                <p className="text-[var(--muted)] text-xs mt-1">
-                  Block #{result.blockNumber.toLocaleString()}
+          <div className="mt-6 space-y-4">
+            {/* Native balance */}
+            <div className="rounded-2xl border border-[var(--card-border)] bg-[var(--card)] p-6">
+              <div className="text-center">
+                <p className="text-[var(--muted)] text-sm mb-1">
+                  Balance on{" "}
+                  {new Date(result.date).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
                 </p>
-              )}
-              {result.slot && (
-                <p className="text-[var(--muted)] text-xs mt-1">
-                  Slot #{result.slot.toLocaleString()}
+                <p className="text-4xl font-bold mt-2">
+                  {result.balance}{" "}
+                  <span
+                    className={
+                      result.chain === "ETH"
+                        ? "text-[var(--eth-color)]"
+                        : "text-[var(--sol-color)]"
+                    }
+                  >
+                    {result.symbol}
+                  </span>
                 </p>
-              )}
+                <p className="text-[var(--muted)] text-xs mt-3 font-mono break-all">
+                  {result.address}
+                </p>
+                {result.blockNumber && (
+                  <p className="text-[var(--muted)] text-xs mt-1">
+                    Block #{result.blockNumber.toLocaleString()}
+                  </p>
+                )}
+                {result.slot && (
+                  <p className="text-[var(--muted)] text-xs mt-1">
+                    Slot #{result.slot.toLocaleString()}
+                  </p>
+                )}
+              </div>
             </div>
+
+            {/* Token breakdown */}
+            {result.tokens && result.tokens.length > 0 && (
+              <div className="rounded-2xl border border-[var(--card-border)] bg-[var(--card)] p-6">
+                <h3 className="text-sm font-medium text-[var(--muted)] mb-4">
+                  Token Holdings ({result.tokens.length})
+                </h3>
+                <div className="space-y-3">
+                  {result.tokens.map((token) => (
+                    <div
+                      key={token.contractAddress}
+                      className="flex items-center justify-between py-2 border-b border-[var(--card-border)] last:border-0"
+                    >
+                      <div>
+                        <p className="text-sm font-medium">{token.symbol}</p>
+                        <p className="text-xs text-[var(--muted)]">
+                          {token.name}
+                        </p>
+                      </div>
+                      <p className="text-sm font-mono">{token.balance}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
