@@ -33,15 +33,44 @@ async function getHistoricalPrice(
 
 // ── ETH helpers ─────────────────────────────────────────────────────────
 
-const ETH_RPC = process.env.ETH_RPC_URL || "https://eth.llamarpc.com";
+const ETH_RPC_ENDPOINTS = [
+  process.env.ETH_RPC_URL,
+  "https://rpc.ankr.com/eth",
+  "https://eth.llamarpc.com",
+  "https://1rpc.io/eth",
+  "https://ethereum-rpc.publicnode.com",
+].filter(Boolean) as string[];
 
 async function ethRpc(method: string, params: unknown[]) {
-  const res = await fetch(ETH_RPC, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-  });
-  return res.json();
+  let lastError: Error | null = null;
+
+  for (const rpc of ETH_RPC_ENDPOINTS) {
+    try {
+      const res = await fetch(rpc, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      });
+
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        lastError = new Error(`RPC ${rpc} returned non-JSON response`);
+        continue;
+      }
+
+      const data = await res.json();
+      if (data.error) {
+        lastError = new Error(data.error.message || "RPC error");
+        continue;
+      }
+      return data;
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error("RPC request failed");
+      continue;
+    }
+  }
+
+  throw lastError || new Error("All ETH RPC endpoints failed");
 }
 
 async function getBlockTimestamp(blockNum: number): Promise<number> {
