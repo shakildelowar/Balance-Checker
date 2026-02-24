@@ -33,35 +33,66 @@ async function getHistoricalPrice(
 
 // ── ETH helpers ─────────────────────────────────────────────────────────
 
-async function getEthBlockByTimestamp(timestamp: number): Promise<number> {
-  const qs = etherscanParams({
-    module: "block",
-    action: "getblocknobytime",
-    timestamp: String(timestamp),
-    closest: "before",
+const ETH_RPC = process.env.ETH_RPC_URL || "https://cloudflare-eth.com";
+
+async function ethRpc(method: string, params: unknown[]) {
+  const res = await fetch(ETH_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
   });
-  const res = await fetch(`${ETHERSCAN_API}?${qs}`);
-  const data = await res.json();
-  if (data.status !== "1") {
-    throw new Error(data.message || "Failed to get block number for date");
+  return res.json();
+}
+
+async function getBlockTimestamp(blockNum: number): Promise<number> {
+  const hex = "0x" + blockNum.toString(16);
+  const data = await ethRpc("eth_getBlockByNumber", [hex, false]);
+  if (!data.result) throw new Error("Block not found");
+  return parseInt(data.result.timestamp, 16);
+}
+
+async function getEthBlockByTimestamp(timestamp: number): Promise<number> {
+  // Try Etherscan first if API key is available
+  if (ETHERSCAN_KEY) {
+    try {
+      const qs = etherscanParams({
+        module: "block",
+        action: "getblocknobytime",
+        timestamp: String(timestamp),
+        closest: "before",
+      });
+      const res = await fetch(`${ETHERSCAN_API}?${qs}`);
+      const data = await res.json();
+      if (data.status === "1") {
+        return parseInt(data.result, 10);
+      }
+    } catch {
+      // Fall through to binary search
+    }
   }
-  return parseInt(data.result, 10);
+
+  // Binary search using RPC (no API key needed)
+  const latestData = await ethRpc("eth_blockNumber", []);
+  if (latestData.error) throw new Error("Failed to get latest block number");
+  let hi = parseInt(latestData.result, 16);
+  let lo = 1;
+
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi + 1) / 2);
+    const ts = await getBlockTimestamp(mid);
+    if (ts <= timestamp) {
+      lo = mid;
+    } else {
+      hi = mid - 1;
+    }
+  }
+
+  return lo;
 }
 
 async function getEthBalance(address: string, blockNumber: number): Promise<string> {
   const blockHex = "0x" + blockNumber.toString(16);
-  const rpcUrl = process.env.ETH_RPC_URL || "https://cloudflare-eth.com";
-  const res = await fetch(rpcUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      method: "eth_getBalance",
-      params: [address, blockHex],
-      id: 1,
-    }),
-  });
-  const data = await res.json();
+  const data = await ethRpc("eth_getBalance", [address, blockHex]);
   if (data.error) throw new Error(data.error.message || "Failed to get ETH balance");
   const wei = BigInt(data.result);
   return (Number(wei) / 1e18).toFixed(6);
@@ -369,7 +400,7 @@ export async function POST(req: NextRequest) {
 
       const [balance, tokens, priceUsd] = await Promise.all([
         getEthBalance(address, blockNumber),
-        getEthTokenBreakdown(address, blockNumber),
+        getEthTokenBreakdown(address, blockNumber).catch(() => [] as TokenHolding[]),
         getHistoricalPrice("ethereum", date),
       ]);
 
