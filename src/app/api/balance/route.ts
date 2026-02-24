@@ -33,7 +33,7 @@ async function getHistoricalPrice(
 
 // ── ETH helpers ─────────────────────────────────────────────────────────
 
-const ETH_RPC = process.env.ETH_RPC_URL || "https://cloudflare-eth.com";
+const ETH_RPC = process.env.ETH_RPC_URL || "https://eth.llamarpc.com";
 
 async function ethRpc(method: string, params: unknown[]) {
   const res = await fetch(ETH_RPC, {
